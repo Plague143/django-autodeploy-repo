@@ -20,6 +20,10 @@
       apt:
         update_cache: yes
         cache_valid_time: 3600
+      become: yes
+      vars:
+        ansible_python_interpreter: /usr/bin/python3
+        use_apt: no
     
     - name: Install Docker and dependencies
       apt:
