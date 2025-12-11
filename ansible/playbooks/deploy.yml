@@ -169,7 +169,7 @@
       docker_compose:
         project_src: "{{ project_dir }}"
         state: present
-        restarted: yes
+        recreate: "always:
     
     - name: Wait for Django to be ready
       wait_for:
