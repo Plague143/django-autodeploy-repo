@@ -155,21 +155,21 @@
     - name: Build Docker images
       community.docker.docker_compose_v2:
         project_src: "{{ project_dir }}"
-        build: "always:
+        build: "always"
         state: present
-        restart: "always"
+        recreate: "always"
     
     - name: Stop old containers if exist
-      docker_compose:
+      community.docker.docker_compose_v2:
         project_src: "{{ project_dir }}"
         state: absent
       ignore_errors: yes
     
     - name: Start application stack
-      docker_compose:
+      community.docker.docker_compose_v2:
         project_src: "{{ project_dir }}"
         state: present
-        recreate: "always:
+        recreate: "always"
     
     - name: Wait for Django to be ready
       wait_for:
@@ -179,7 +179,7 @@
         timeout: 120
     
     - name: Run Django migrations
-      docker_compose:
+      community.docker.docker_compose_v2:
         project_src: "{{ project_dir }}"
         services: django
         command: python manage.py migrate --noinput
