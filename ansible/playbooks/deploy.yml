@@ -153,9 +153,11 @@
             media_volume:
     
     - name: Build Docker images
-      docker_compose:
+      community.docker.docker_compose_v2:
         project_src: "{{ project_dir }}"
-        build: yes
+        build: "always:
+        state: present
+        restart: "always"
     
     - name: Stop old containers if exist
       docker_compose:
