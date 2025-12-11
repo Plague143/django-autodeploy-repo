@@ -18,9 +18,6 @@
     
     - name: Update apt cache (via apt-get)
       command: apt-get update
-      become: yes
-      become_method: su  # <-- Использовать su вместо sudo
-      become_user: root  # <-- Явно указать root
       changed_when: false
     
     - name: Install Docker and dependencies
