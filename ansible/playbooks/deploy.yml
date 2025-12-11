@@ -16,28 +16,30 @@
           Repo: {{ git_repo }}
           Branch: {{ git_branch }}
     
-    - name: Update apt cache (via apt-get)
-      command: apt-get update
+    - name: Update apt cache (raw command)
+      raw: apt-get update
       changed_when: false
+      register: apt_update_result
+
+    - debug:
+        msg: "Apt update completed"
+      when: apt_update_result is changed
     
-    - name: Install Docker and dependencies
-      apt:
-        name:
-          - docker.io
-          - docker-compose
-          - python3-pip
-          - git
-        state: present
-        update_cache: yes
-      when: ansible_os_family == "Debian"
+
+    - name: Install Docker and dependencies (raw command)
+      raw: apt-get install -y docker.io docker-compose python3-pip git
+      register: apt_install_result
+
+    - debug:
+        msg: "Docker installed: {{ apt_install_result.stdout }}"
+
     
-    - name: Install Docker Python SDK (via apt)
-      apt:
-        name:
-          - python3-docker
-          - python3-docker-compose  # Или python3-docker-compose-v2
-        state: present
-      become: present
+    - name: Install Docker Python SDK (via pip)
+      raw: pip3 install docker docker-compose --break-system-packages
+      register: pip_install_result
+    
+    - debug:
+        msg: "Python packages installed: {{ pip_install_result.stdout }}"
     
     - name: Ensure Docker service is running
       systemd:
