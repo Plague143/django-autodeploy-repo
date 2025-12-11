@@ -33,12 +33,13 @@
         update_cache: yes
       when: ansible_os_family == "Debian"
     
-    - name: Install Docker Python module
-      pip:
+    - name: Install Docker Python SDK (via apt)
+      apt:
         name:
-          - docker
-          - docker-compose
+          - python3-docker
+          - python3-docker-compose  # Или python3-docker-compose-v2
         state: present
+        update_cache: yes
     
     - name: Ensure Docker service is running
       systemd:
