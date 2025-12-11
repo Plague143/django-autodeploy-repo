@@ -1,0 +1,137 @@
+---
+- name: Deploy Django application locally
+  hosts: webservers
+  become: yes
+  
+  tasks:
+    - name: Debug variables
+      debug:
+        msg: "Deploying {{ app_name }} to {{ project_dir }}"
+    
+    - name: Create project directory
+      file:
+        path: "{{ project_dir }}"
+        state: directory
+        mode: '0755'
+    
+    - name: Copy docker-compose.yml
+      copy:
+        content: |
+          version: '3.8'
+          
+          services:
+            db:
+              image: {{ postgres_image }}
+              environment:
+                POSTGRES_DB: {{ db_name }}
+                POSTGRES_USER: {{ db_user }}
+                POSTGRES_PASSWORD: {{ db_password | default('testpassword123') }}
+              volumes:
+                - postgres_data:/var/lib/postgresql/data
+              ports:
+                - "5432:5432"
+              networks:
+                - app-network
+              restart: unless-stopped
+            
+            redis:
+              image: {{ redis_image }}
+              command: redis-server --appendonly yes
+              volumes:
+                - redis_data:/data
+              ports:
+                - "6379:6379"
+              networks:
+                - app-network
+              restart: unless-stopped
+            
+            django:
+              build:
+                context: /tmp/django-repo
+                dockerfile: docker/django/Dockerfile
+              image: {{ django_image }}
+              environment:
+                DATABASE_URL: postgresql://{{ db_user }}:{{ db_password | default('testpassword123') }}@db/{{ db_name }}
+                REDIS_URL: redis://redis:6379/0
+                SECRET_KEY: {{ django_secret_key | default('django-insecure-test-key') }}
+                DEBUG: {{ debug_mode }}
+              volumes:
+                - django_static:/app/static
+                - django_media:/app/media
+              depends_on:
+                - db
+                - redis
+              networks:
+                - app-network
+              restart: unless-stopped
+            
+            nginx:
+              build:
+                context: /tmp/django-repo
+                dockerfile: docker/nginx/Dockerfile
+              image: {{ nginx_image }}
+              ports:
+                - "{{ nginx_host_port }}:80"
+              volumes:
+                - django_static:/app/static:ro
+              depends_on:
+                - django
+              networks:
+                - app-network
+              restart: unless-stopped
+          
+          volumes:
+            postgres_data:
+            redis_data:
+            django_static:
+            django_media:
+          
+          networks:
+            app-network:
+              driver: bridge
+        dest: "{{ project_dir }}/docker-compose.yml"
+        mode: '0644'
+    
+    - name: Build Docker images
+      docker_compose:
+        project_src: "{{ project_dir }}"
+        build: yes
+    
+    - name: Stop old containers
+      docker_compose:
+        project_src: "{{ project_dir }}"
+        state: absent
+      ignore_errors: yes
+    
+    - name: Start application
+      docker_compose:
+        project_src: "{{ project_dir }}"
+        state: present
+        restart: yes
+    
+    - name: Run database migrations
+      docker_container:
+        name: django-migrate
+        image: "{{ django_image }}"
+        command: python manage.py migrate
+        env:
+          DATABASE_URL: postgresql://{{ db_user }}:{{ db_password | default('testpassword123') }}@db/{{ db_name }}
+          SECRET_KEY: {{ django_secret_key | default('django-insecure-test-key') }}
+        auto_remove: true
+    
+    - name: Check application health
+      uri:
+        url: "http://localhost:{{ nginx_host_port }}/health/"
+        status_code: 200
+      register: health_check
+      until: health_check.status == 200
+      retries: 10
+      delay: 5
+    
+    - name: Show deployment info
+      debug:
+        msg:
+          - "✅ Django приложение успешно развернуто!"
+          - "🚀 Доступно по адресу: http://localhost:{{ nginx_host_port }}"
+          - "🗄️  PostgreSQL: localhost:5432"
+          - "⚡ Redis: localhost:6379"
