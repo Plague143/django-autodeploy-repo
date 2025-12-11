@@ -16,14 +16,12 @@
           Repo: {{ git_repo }}
           Branch: {{ git_branch }}
     
-    - name: Update apt cache
-      apt:
-        update_cache: yes
-        cache_valid_time: 3600
+    - name: Update apt cache (via apt-get)
+      command: apt-get update
       become: yes
-      vars:
-        ansible_python_interpreter: /usr/bin/python3
-        use_apt: no
+      become_method: su  # <-- Использовать su вместо sudo
+      become_user: root  # <-- Явно указать root
+      changed_when: false
     
     - name: Install Docker and dependencies
       apt:
