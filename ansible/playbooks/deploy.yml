@@ -1,6 +1,7 @@
 # ansible/playbooks/deploy.yml
 - name: Deploy Django Application
-  hosts: webservers
+  hosts: localhost
+  connection: local
   gather_facts: yes
   vars:
     project_dir: "{{ project_dir | default('/opt/my_django_app') }}"

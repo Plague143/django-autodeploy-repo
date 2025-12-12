@@ -1,0 +1,21 @@
+# ansible/playbooks/test-docker.yml
+- name: Test Docker availability
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Check commands
+      shell: |
+        echo "=== System Info ==="
+        uname -a
+        echo "=== Package Manager ==="
+        which apt-get || which apk || echo "No package manager found"
+        echo "=== Docker ==="
+        docker --version 2>/dev/null || echo "Docker not found"
+        echo "=== Docker Compose ==="
+        docker-compose --version 2>/dev/null || echo "Docker-compose not found"
+        echo "=== Docker Socket ==="
+        ls -la /var/run/docker.sock 2>/dev/null || echo "No Docker socket"
+      register: info
+    
+    - debug:
+        msg: "{{ info.stdout_lines }}"
